@@ -6,8 +6,155 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   echo = TRUE,
-  warning = FALSE,
+  warning = FALSE
 )
 ```
+
+```{r libraries, include=FALSE}
+# data wrangling
+library(dplyr)
+
+# data visualisation
+library(ggplot2)
+library(scales) #formatting numbers
+```
+
+```{r other options, include=FALSE}
+# theme for ggplot
+theme_set(theme_minimal())
+
+# turn off scientific notation
+options(scipen=999)
+```
+
+
+
+# 1. Data and Initial EDA
+
+
+## 1.1 Data
+
+First we need to read in the data.
+Since there are some unhandy column names which begin with [0-9] I am also going to use the
+`clean_names()` function from the `{janitor}` package to deal with that issue.
+
+```{r}
+# read data
+df <- vroom::vroom("data/train.csv")
+df_predict <- vroom::vroom("data/test.csv")
+
+# clean column names (especially those beginning with [0-9])
+df <- janitor::clean_names(df)
+df_predict <- janitor::clean_names(df_predict)
+```
+
+
+## 1.2 General Overview of the Data
+
+Next, it is a good idea to get a general overview of the data.
+This includes questions like:
+
+* What is the dimension of the data (how many rows and columns)?
+* What data types do the features have?
+* Are missing values present? If yes, where and how many?
+
+```{r, include = FALSE}
+head(df, 3)
+```
+
+```{r}
+# dimension and data types
+skimr::skim(df) %>%
+  summary()
+```
+
+```{r, echo=FALSE}
+# EDA on missing values
+# output not shown because it's so long
+skimr::skim(df) %>%
+  select(skim_type, skim_variable, n_missing, complete_rate)
+```
+Some takeaways regarding the occurrence of missing values:
+
+- Most features do not have missing values
+- Features with lots of missing values are:
+  - `alley`
+  - `fireplace_qu`
+  - `fence`
+  - `pool_qc `
+  - `misc_feature`
+- We can assume that the values of the above mentioned features are not missing at random
+- Other features with missing values are usually missing in around 5% of the cases
+
+
+
+## 1.3 Target Variable
+
+For regression tasks it is always a good idea to take a look at the target variable and see
+how it is distributed.
+
+```{r}
+# original distribution of target variable
+df %>%
+  ggplot(aes(sale_price)) +
+  geom_histogram(color = "black", fill = "#1E88E5") +
+  scale_x_continuous(labels = comma) +
+  labs(
+    x = "Sale Price",
+    y = " ",
+    title = 'Distribution of "Sale Price" Target Variable'
+  ) +
+  theme(
+    plot.title = element_text(
+      size = 16,
+      margin = margin(0, 0, 20, 0)
+      ),
+    plot.title.position = "plot",
+    axis.title.x = element_text(
+      margin = margin(10, 0, 0, 0)
+    )
+  )
+```
+
+From  this plot you can tell that the target variable is distributed right skewed.
+For prediction purposes it is usually helpful when the distribution is (approximately) normal.
+This can be achieved by some transformation, e.g. a logarithmic one.
+Also the competition rules require you to predict the logarithmic price as well.<br>
+Let's create the same plot again with a logarithmic transformation before.
+
+```{r}
+# distribution of target variable after logarithmic transformation
+df %>%
+  mutate(sale_price = log(sale_price)) %>%
+  ggplot(aes(sale_price)) +
+  geom_histogram(color = "black", fill = "#1E88E5") +
+  scale_x_continuous(labels = comma) +
+  labs(
+    x = "Sale Price",
+    y = " ",
+    title = 'Distribution of "Sale Price" after logarithmic Transformation'
+  ) +
+  theme(
+    plot.title = element_text(
+      size = 16,
+      margin = margin(0, 0, 20, 0)
+      ),
+    plot.title.position = "plot",
+    axis.title.x = element_text(
+      margin = margin(10, 0, 0, 0)
+    )
+  )
+```
+
+This comes much closer to a normal distribution and will very likely help us in making better predictions.
+
+```{r}
+# apply log transformation in data
+df  <- df %>%
+  mutate(sale_price = log(sale_price))
+```
+
+
+
 
 
