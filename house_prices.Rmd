@@ -13,10 +13,13 @@ knitr::opts_chunk$set(
 ```{r libraries, include=FALSE}
 # data wrangling
 library(dplyr)
+library(purrr)
+library(stringr)
 
 # data visualisation
 library(ggplot2)
 library(scales) #formatting numbers
+library(corrr) #correlation dataframes and plots
 ```
 
 ```{r other options, include=FALSE}
@@ -155,6 +158,87 @@ df  <- df %>%
 ```
 
 
+
+# 2. EDA on numeric Features
+
+Let's explore and analyse the data more closely.
+Since this is a regression task and there are so many numeric features, it is probably a good idead to start exploring those.<br>
+Let's get a firs overview of all numeric features:
+
+```{r}
+# column names of numeric features
+df %>%
+  select(-sale_price) %>%
+  select_if(is.numeric) %>%
+  names()
+```
+
+`id` is not an actual feature and can be omitted.<br>
+Additionally `ms_sub_class` has numeric values but is not a numeric feature (look at the description file). So this needs to be changed first.
+
+
+```{r}
+# initial correlation dataframe
+corr_df <- df %>%
+  select(-id) %>%
+  select_if(is.numeric) %>%
+  relocate(sale_price) %>%
+  correlate(diagonal = 1)
+
+# sort by correlation to `sale_price` and select
+# 10 most important
+corr_df <- corr_df %>%
+  arrange(desc(sale_price)) %>%
+  head(11)
+
+corr_vars <- unique(corr_df$term)
+
+corr_df <- corr_df %>%
+  select(c("term", corr_vars)) %>%
+    mutate_if(
+    is.numeric,
+    ~ na_if(., . == 1)
+  ) %>%
+  shave()
+
+# plot
+corr_plot <- corr_df %>%
+  rplot(
+    print_cor = TRUE,
+    colors = c("#D81B60", "white", "#1E88E5")
+  )
+
+corr_plot +
+  labs(title = 'Correlations to "Sale Price"') +
+  theme(
+    axis.text.x = element_text(angle = 45, vjust = 0.5),
+    plot.title = element_text(
+      size = 16,
+      margin = margin(0, 0, 20, 0)
+      ),
+    plot.title.position = "plot"
+  )
+```
+
+
+
+### eda on overallqual ###
+
+
+### identify 
+
+```{r}
+li_features <- names(select(df, -id, -sale_price))
+```
+
+
+```{r}
+li_features[str_detect(li_features, "area")]
+```
+
+```{r}
+li_features[str_detect(li_features, "sf")]
+```
 
 
 
