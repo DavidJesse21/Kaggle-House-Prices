@@ -13,6 +13,7 @@ knitr::opts_chunk$set(
 ```{r libraries, include=FALSE}
 # data wrangling
 library(dplyr)
+library(tidyr)
 library(purrr)
 library(stringr)
 
@@ -20,6 +21,21 @@ library(stringr)
 library(ggplot2)
 library(scales) #formatting numbers
 library(corrr) #correlation dataframes and plots
+library(vip) # variable importance plots
+
+# machine learning
+library(recipes)
+library(parsnip)
+library(tune)
+library(finetune)
+library(rsample)
+library(dials)
+library(workflows)
+library(yardstick)
+library(broom)
+
+# nice table output
+library(kableExtra)
 ```
 
 ```{r other options, include=FALSE}
@@ -220,25 +236,345 @@ corr_plot +
   )
 ```
 
+Based on these first insights it is probably a good idead to do some further EDA on some of the numeric features.
 
 
-### eda on overallqual ###
-
-
-### identify 
+### 2.1 Overall Quality
 
 ```{r}
+# EDA on `overall_qual`
+df %>%
+  ggplot(aes(x = overall_qual, y = sale_price)) +
+  geom_point(
+    na.rm = TRUE,
+    position = "jitter",
+    color = "#6C6C6D",
+    alpha = 0.5
+    ) +
+  scale_x_continuous(breaks = 1:10) +
+  geom_smooth(
+    method = "lm",
+    na.rm = TRUE,
+    color = "#1E88E5",
+    se = FALSE,
+    size = 1.4
+    ) +
+  labs(
+    x = "Overall Quality Rating",
+    y = "Sale Price"
+  ) +
+  theme(
+    axis.title.x = element_text(margin = margin(10, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, 10, 0, 0))
+  )
+```
+
+
+### 2.2 Ground Living Area
+
+```{r}
+# EDA on `gr_liv_area`
+
+# for annotation in plot
+cor_gr_liv1 = cor(df$gr_liv_area, df$sale_price, use = "pairwise.complete.obs")
+
+df %>%
+  ggplot(aes(x = gr_liv_area, y = sale_price)) +
+    geom_point(
+    na.rm = TRUE,
+    position = "jitter",
+    color = "#6C6C6D",
+    alpha = 0.5
+    ) +
+  geom_smooth(
+    method = "lm",
+    na.rm = TRUE,
+    color = "#1E88E5",
+    se = FALSE,
+    size = 1.4
+    ) +
+  labs(
+    x = "Ground Living Area",
+    y = "Sale Price"
+  ) +
+  theme(
+    axis.title.x = element_text(margin = margin(10, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, 10, 0, 0))
+  ) +
+  annotate(
+    x = 5000, y = 11,
+    label = paste0("Correlation: ", round(cor_gr_liv1, 2)),
+    geom = "text", size = 4.5
+  )
+```
+
+In this plot you can see that the relation between `gr_liv_area` and `sale_price` is quite strong but highly influenced by some outliers.
+You can remove these outliers from the training data but that might not necessarily be a good idea since the machine learning model still needs to be robust to these observations as well in the test data.
+Another approach is to use some sort of transformation of `gr_liv_area`.<br>
+More precisely I am going to look at the effect of a *Box-Cox Transformation* and compare the resulting correlation coefficient to the previous one (without any transformation).
+
+
+```{r}
+# EDA on `gr_liv_area`with Box-Cox Transformation before
+
+# BoxCox transformation of `gr_liv_area`
+df_bc <- recipe(sale_price ~ ., data = select(df, gr_liv_area, sale_price)) %>%
+  step_BoxCox(all_numeric(), -sale_price) %>%
+  prep() %>%
+  juice()
+
+# correlation after transformation
+cor_gr_liv2 <- cor(df_bc$gr_liv_area, df_bc$sale_price, use = "pairwise.complete.obs")
+
+# plot and explore effect of transformation
+df_bc %>%
+  ggplot(aes(x = gr_liv_area, y = sale_price)) +
+    geom_point(
+    na.rm = TRUE,
+    position = "jitter",
+    color = "#6C6C6D",
+    alpha = 0.5
+    ) +
+  geom_smooth(
+    method = "lm",
+    na.rm = TRUE,
+    color = "#1E88E5",
+    se = FALSE,
+    size = 1.4
+    ) +
+  labs(
+    x = "Ground Living Area",
+    y = "Sale Price"
+  ) +
+  theme(
+    axis.title.x = element_text(margin = margin(10, 0, 0, 0)),
+    axis.title.y = element_text(margin = margin(0, 10, 0, 0))
+  ) +
+  annotate(
+    x = 8.5, y = 11,
+    label = paste0("Correlation: ", round(cor_gr_liv2, 2)),
+    geom = "text", size = 4.5
+  )
+```
+
+Applying the *Box-Cox transformation* increased the correlation between `gr_liv_area` and `sale_price` by 0.03.
+While this might not sound like a lot you still need to keep in mind that there are various other area related features which probably follow the same pattern (i.e. that there are some extreme observations).
+So applying the transformation to all of those features and maybe removing some outliers before that might help a lot.
+
+
+
+### 2.3 Identify area features
+
+There are a lot of area related features which are very likely not independent of each other.
+In some cases one feature might even be a linear combination of some other features.
+We need to find a way to deal with these features.
+
+```{r}
+# extract list of area related features ---
+
+# list of feature names
 li_features <- names(select(df, -id, -sale_price))
+
+# detect area related feature
+li_features_area <- c(
+  li_features[str_detect(li_features, "area")],
+  li_features[str_detect(li_features, "sf")]
+)
+
+li_features_area
+```
+
+##### Basement features
+
+```{r}
+# basement features ---
+df %>%
+  transmute(
+    total_bsmt_sf = total_bsmt_sf,
+    total_bsmt_2 = bsmt_fin_sf1 + bsmt_fin_sf2 + bsmt_unf_sf
+  ) %>%
+  summarise(correlation = cor(total_bsmt_sf, total_bsmt_2, use = "pairwise.complete.obs"))
+```
+
+As you can see `total_bsmt_sf` is a linear combination of the other basement features.
+However, we should not simply exclude the other basement features, since they contain information about the quality of the basement area.
+Therefore we can use them to calculate shares/ratios based on the total basement area.
+
+
+##### Square Feet Living Area above Ground
+
+```{r}
+li_features_area[
+  !str_detect(li_features_area, "bsmt")
+]
 ```
 
 
 ```{r}
-li_features[str_detect(li_features, "area")]
+# living area features
+df %>%
+  select(gr_liv_area, ends_with("flr_sf"), low_qual_fin_sf) %>%
+  transmute(
+    gr_liv_area = gr_liv_area,
+    gr_total = rowSums(select(., -gr_liv_area))
+  ) %>%
+  summarise(
+    correlation = cor(gr_liv_area, gr_total, use = "pairwise.complete.obs")
+  )
+```
+
+The same goes for the livng area features.
+They are perfectly collinear but also do contain some qualitative information which might impact the effects.
+
+
+
+### 2.4 Count Features (rooms)
+
+It might also be worth mentioning the bathroom features, which are the following:
+
+```{r}
+names(df)[str_detect(names(df), "bath")]
+```
+
+Instead of having four different features which tell very similar things, we can simply combine them by calculating the total number of bathrooms.
+Full baths are going to be weighted normally and half baths are going to be weighted 0.5.
+
+
+
+
+
+# 3. EDA on categorical Features
+
+Since for categorical features we cannot calculate simple correlations we need to pick a different approach to get a brief overview of the different and most important categorical features.
+My approach here is to fit a random forest model with categorical features and only and after that look at the variable importances in a plot.
+
+```{r}
+# fit random forest with categorical features only ---
+
+rf_cat <- rand_forest(trees = 250) %>%
+  set_mode("regression") %>%
+  set_engine("ranger", importance = "impurity")
+
+rf_dat <- df %>%
+  select_if(~!is.numeric(.)) %>%
+  cbind(sale_price = df$sale_price) %>%
+  mutate_at(
+    vars(-sale_price),
+    ~replace_na(., "missing")
+  )
+
+rf_cat_fit <- rf_cat %>%
+  fit(
+    sale_price ~ .,
+    data = rf_dat
+  )
 ```
 
 ```{r}
-li_features[str_detect(li_features, "sf")]
+# vip plot of categorical random forest ---
+vip(rf_cat_fit, num_features = 15) +
+  labs(title = "Importance of categorical Features") +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(
+      margin = margin(0, 0, 10, 0)
+    )
+  )
 ```
+
+Most of the most important categorical are ordinal features associated with a rating (e.g. kitchen_qual).
+Some of them have an associated numeric feature and hence can be combined to generate interaction terms:
+
+- `bsmt_qual:total_bsmt_sf`
+- `garage_type:garage_area/cars`
+
+Furthermore, I think that the feature `neighborhood` could be quite interesting regarding interaction terms as well.
+I.e. I assume that the price of one additional square foot of living area varies among the neighborhoods/districts of the city.
+
+```{r}
+df %>%
+  ggplot(aes(x = sale_price, y = reorder(neighborhood, sale_price))) +
+  geom_boxplot() +
+  labs(
+    x = "Price",
+    y = "Neighborhood / District",
+    title = "Sale Price Variation by Neighborhood"
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(
+      margin = margin(0, 0, 10, 0)
+    )
+  )
+```
+
+You can clearly tell that `neighborhood` is an important feature, too.
+But still, numeric features or those that come closer to that (i.e. ordinal features) are more important for predictions.
+The combination of both of them might improve results even further:
+
+- `neighborhood:gr_liv_area`
+- `neighborhood:lot_area`
+
+
+# 4. Year and Date Features
+
+```{r}
+# names of year and date features
+paste0(
+  "Year and Date Features:\n",
+  paste0(
+    c(
+      names(df)[str_detect(names(df), "yr")],
+      names(df)[str_detect(names(df), "year")],
+      names(df)[str_detect(names(df), "mo_")]
+    ),
+    collapse = ", "
+  )
+) %>% cat()
+```
+From the features `garage_yr_blt` and `year_built` the age of the house/garage can be calculated and thus numeric features can be derived from them.
+This is not the same for `yr_sold` and `mo_sold`.
+For example there is no logical reasoning like December is more/better than January.
+Because of that these two features are going to be converted to factor variables.
+
+Then there is the feature `year_remod_add`.
+It is the remodel date but according to the documentation the same like `year_built` if it has not been remodelled.
+I think the samrtest decision is just so extract the information if the house has been remodelled or not.
+
+```{r}
+# number of houses that have been remodelled
+df %>%
+  transmute(has_remod = ifelse(year_built == year_remod_add, "No", "Yes")) %>%
+  count(has_remod)
+```
+
+
+
+
+
+
+
+
+```{r}
+df %>%
+  select_if(~!is.numeric(.)) %>%
+  bind_cols(sale_price = df$sale_price) %>%
+  mutate_all(~replace_na(., "missing"))
+
+```
+
+```{r}
+df %>%
+  select_if(~!is.numeric(.)) %>%
+  cbind(sale_price = df$sale_price) %>%
+  mutate_at(
+    vars(-sale_price),
+    ~replace_na(., "missing")
+  )
+```
+
+
+
 
 
 
