@@ -1,0 +1,9 @@
+name|type|parent|branches|progress
+data|stem|data|0|running
+data|stem|data|0|built
+data_split|stem|data_split|0|running
+data_split|stem|data_split|0|built
+rec_init|stem|rec_init|0|running
+rec_init|stem|rec_init|0|built
+rec_update|stem|rec_update|0|running
+rec_update|stem|rec_update|0|built

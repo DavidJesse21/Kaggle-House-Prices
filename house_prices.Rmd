@@ -19,6 +19,7 @@ library(stringr)
 
 # data visualisation
 library(ggplot2)
+library(ggrepel) # label annotations
 library(scales) #formatting numbers
 library(corrr) #correlation dataframes and plots
 library(vip) # variable importance plots
@@ -550,27 +551,56 @@ df %>%
 
 
 
-
-
-
-
+# 5. Missing Values
 
 ```{r}
 df %>%
-  select_if(~!is.numeric(.)) %>%
-  bind_cols(sale_price = df$sale_price) %>%
-  mutate_all(~replace_na(., "missing"))
+  select(-id, -sale_price) %>%
+  summarise_all(~sum(is.na(.))) %>%
+  tidyr::pivot_longer(everything(), names_to = "var", values_to = "n") %>%
+  filter(n > 0) %>%
+  arrange(desc(n))
+```
 
+```{r}
+nrow(df)
 ```
 
 ```{r}
 df %>%
-  select_if(~!is.numeric(.)) %>%
-  cbind(sale_price = df$sale_price) %>%
-  mutate_at(
-    vars(-sale_price),
-    ~replace_na(., "missing")
-  )
+  count(misc_feature)
+```
+
+```{r}
+df %>%
+  select(contains("misc"))
+```
+
+
+
+# 6. Removing outliers
+
+```{r}
+df %>%
+  ggplot(aes(x = gr_liv_area, y = sale_price, label = id)) +
+  geom_point() +
+  geom_text_repel()
+```
+
+
+```{r}
+df %>%
+  ggplot(aes(x = lot_area, y = sale_price, label = id)) +
+  geom_point() +
+  geom_text_repel()
+```
+
+
+```{r}
+df %>%
+  ggplot() +
+  geom_point(aes(x = log(gr_liv_area), y = log(lot_area), color = sale_price),
+             size = 3, alpha = 0.8)
 ```
 
 

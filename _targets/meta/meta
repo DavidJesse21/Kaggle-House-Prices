@@ -1,0 +1,17 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|iteration|parent|children|seconds|warnings|error
+split_data|function|adb50b91af13e151||||||||||||||
+step_role_and_type|function|84a182647b9b85a5||||||||||||||
+init_recipe|function|1dd5206f4c75ac29||||||||||||||
+read_data|function|e96b9dee27cdd911||||||||||||||
+raw_data_file|stem|9e9758c2df08d2db|f2fac2ecaf326789|ef46db3751d8e999|2110307107|data/train.csv|bbbe6995c5e98f66|d0c7edf993463860|460676|file|vector|||3.37||
+data|stem|1fd48e7ae92aacea|614c74fe49122b4b|45c1a43af417484f|1588979285|_targets/objects/data|4f9c05ccca4afca4|a8f658b6a7381cf0|91230|rds|vector|||0.14||
+data_split|stem|12141e2d10616041|2eb50112696472e0|c3c6b6649f59b839|1593669431|_targets/objects/data_split|cda15dcf92bdd140|6d4407adf46c7f1d|94574|rds|vector|||0.03||
+rec_init|stem||2ebcc8c82f5ca1d5|b20dcfe2693527c5|-1105638347||||0|rds|vector|||0.02||Objekt sale_price nicht gefunden
+split_data|function|adb50b91af13e151
+step_role_and_type|function|84a182647b9b85a5
+init_recipe|function|1dd5206f4c75ac29
+read_and_clean|function|9bba5b25ffc0a701
+data|stem|3635d37bd37b918b|34232de274a59aac|3790bf2d0d0f2f2f|1588979285|_targets/objects/data|f125088296b0e8d4|114677465984cf8c|91783|rds|vector|||2.49||
+data_split|stem|add8646a9987e82d|2eb50112696472e0|ff909b420fe89260|1593669431|_targets/objects/data_split|e359039f953856c2|416d2cfa007aaeb6|95669|rds|vector|||0.08||
+rec_init|stem|7c90f2f555114cfa|2ebcc8c82f5ca1d5|0e330022d18063fc|-1105638347|_targets/objects/rec_init|ed16321925506c48|1a71faff72bca57f|66266|rds|vector|||0.08||
+rec_update|stem|8be011f428074a65|c4e07a6687a884df|dd3b22c4e0260383|857357517|_targets/objects/rec_update|afa132a79d7f306c|5fd5a5c40439be6c|264310|rds|vector|||0.03||
