@@ -3,6 +3,7 @@ library(targets)
 # custom functions / pipeline steps
 source("R/init_training.R")
 source("R/rec_impute.R")
+source("R/rec_preproc.R")
 
 
 # Set target-specific options such as packages.
@@ -29,5 +30,7 @@ list(
   # first steps: update role and data types
   tar_target(rec_update, step_role_and_type(rec_init)),
   # impute missing values
-  tar_target(rec_impute, step_na_everything(rec_update))
+  tar_target(rec_impute, step_na_everything(rec_update)),
+  # apply main preprocessing steps
+  tar_target(rec_preproc,  step_preprocess(rec_impute))
 )

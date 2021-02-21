@@ -409,6 +409,21 @@ li_features_area[
   !str_detect(li_features_area, "bsmt")
 ]
 ```
+```{r}
+li_features_area
+```
+
+```{r}
+df %>%
+  select(contains("porch"), wood_deck_sf) %>%
+  head() %>%
+  names()
+```
+
+
+```{r}
+df$open_porch_sf %>% summary
+```
 
 
 ```{r}
@@ -562,17 +577,57 @@ df %>%
   arrange(desc(n))
 ```
 
+
+
 ```{r}
-df %>%
-  select(-id, -sale_price) %>%
-  summarise_all(~sum(is.na(.))) %>%
-  select_if(~. > 0)
+tar_read(rec_preproc) %>%
+  prep() %>%
+  juice() %>%
+  head()
+```
+
+```{r}
+tar_read(rec_preproc) %>%
+  prep() %>%
+  juice() %>%
+  head()
+```
+
+```{r}
+tar_read(rec_preproc) %>%
+  prep() %>%
+  juice() %>%
+  head()
+```
+
+
+```{r}
+tar_read(rec_preproc) %>%
+  prep() %>%
+  juice() %>%
+  head()
 ```
 
 
 
+
 ```{r}
-df$lot_frontage %>% summary()
+df %>%
+  count(bsmt_fin_type1)
+```
+
+```{r}
+df %>%
+  count(bsmt_fin_type2)
+```
+
+
+```{r}
+    step_ratio(
+      bsmt_fin_sf1, bsmt_fin_sf2, bsmt_unf_sf,
+      denom = denom_vars(total_bsmt_sf)
+    ) %>%
+    step_rm(bsmt_fin_sf1, bsmt_fin_sf2, bsmt_unf_sf)
 ```
 
 
@@ -705,13 +760,15 @@ df %>%
 
 
 ```{r}
-names(df)
+df %>%
+  count(neighborhood, sort = TRUE)
 ```
 
 
 ```{r}
 df %>%
-  count(misc_feature)
+  count(neighborhood, sort = TRUE) %>%
+  mutate(n = n/sum(n))
 ```
 
 ```{r}
@@ -742,12 +799,20 @@ df %>%
 ```{r}
 df %>%
   ggplot() +
-  geom_point(aes(x = log(gr_liv_area), y = log(lot_area), color = sale_price),
+  geom_point(aes(x = gr_liv_area, y = overall_qual, color = sale_price),
              size = 3, alpha = 0.8)
 ```
 
 
 
+```{r}
+df %>%
+  select(contains("garage")) %>%
+  head()
+```
 
+```{r}
+li_features_area
+```
 
 

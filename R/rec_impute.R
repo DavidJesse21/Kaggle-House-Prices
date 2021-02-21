@@ -116,6 +116,14 @@ step_na_miscchr <- function(rec) {
   return(rec)
 }
 
+#' remaining numeric features
+step_na_miscnum  <-  function(rec) {
+  rec = rec %>%
+    step_medianimpute(all_numeric(), -all_outcomes())
+  
+  return(rec)
+}
+
 
 #' combine all steps
 step_na_everything <- function(rec) {
@@ -129,7 +137,8 @@ step_na_everything <- function(rec) {
     step_na_garage() %>%
     step_na_bsmt() %>%
     step_na_masvnr() %>%
-    step_na_miscchr()
+    step_na_miscchr() %>%
+    step_na_miscnum()
   
   return(rec)
 }
