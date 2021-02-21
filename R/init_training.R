@@ -59,7 +59,7 @@ init_recipe <- function(train_data) {
 #'
 #' @return A recipe
 #' 
-#' @importFrom recipes update_role step_mutate
+#' @importFrom recipes update_role step_num2factor
 step_role_and_type <- function(recipe) {
   rec = recipe %>%
     update_role(id, new_role = "ID") %>%

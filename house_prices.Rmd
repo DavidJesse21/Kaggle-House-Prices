@@ -563,8 +563,151 @@ df %>%
 ```
 
 ```{r}
-nrow(df)
+df %>%
+  select(-id, -sale_price) %>%
+  summarise_all(~sum(is.na(.))) %>%
+  select_if(~. > 0)
 ```
+
+
+
+```{r}
+df$lot_frontage %>% summary()
+```
+
+
+```{r}
+df %>%
+  select(starts_with("mas_vnr"))
+```
+
+```{r}
+    step_na_pool() %>%
+    step_na_shed() %>%
+    step_na_alley() %>%
+    step_na_fence() %>%
+    step_na_fire() %>%
+    step_na_lotfront() %>%
+    step_na_garage() %>%
+    step_na_bsmt() %>%
+    step_na_masvnr() %>%
+    step_na_miscchr()
+```
+
+
+```{r}
+source("R/rec_impute.R")
+
+tar_read(rec_update) %>%
+  step_na_pool() %>%
+  step_na_shed() %>%
+  step_na_alley()
+```
+
+```{r}
+tar_read(rec_init) %>%
+  step_role_and_type() %>%
+  step_lowerimpute(garage_yr_blt) %>%
+  prep()  %>%
+  juice() %>%
+  select(garage_yr_blt) %>%
+  summarise_all( ~sum(is.na(.)))
+```
+
+```{r}
+tar_read(rec_init) %>%
+  step_role_and_type() %>%
+  step_lowerimpute(garage_yr_blt) %>%
+  prep()  %>%
+  juice() %>%
+  summarise(sum(is.na(garage_yr_blt)))
+```
+
+```{r}
+tar_read(rec_init) %>%
+  step_lowerimpute(garage_yr_blt) %>%
+  prep()  %>%
+  tidy(number = 1)
+```
+
+
+```{r}
+tar_read(rec_init) %>%
+  step_role_and_type() %>%
+  
+  prep() %>%
+  juice() %>%
+  summarise(sum(is.na(garage_yr_blt)))
+```
+
+```{r}
+tar_read(rec_init) %>%
+  step_role_and_type() %>%
+  step_na_pool() %>%
+  step_na_shed() %>%
+  step_na_alley() %>%
+  step_na_fence() %>%
+  step_na_fire() %>%
+  step_na_lotfront() %>%
+  step_na_garage() %>%
+  step_na_bsmt() %>%
+  step_na_masvnr() %>%
+  step_na_miscchr()
+```
+
+```{r}
+tar_read(rec_init) %>%
+  update_role(id, new_role = "ID") %>%
+  step_mutate(ms_sub_class = factor(ms_sub_class))
+```
+
+
+```{r}
+tar_read(rec_impute) %>%
+  prep() %>%
+  bake(new_data = df) %>%
+  summarise_all(~sum(is.na(.))) %>%
+  select_if(. > 0)
+```
+
+```{r}
+df %>%
+  select(heating_qc) %>%
+  summarise_all(~sum(is.na(.)))
+```
+
+
+```{r}
+tar_read(rec_impute) %>%
+  prep() %>%
+  tidy(number = 13)
+```
+
+
+```{r}
+df %>%
+  select(contains("garage"), -is.character)
+```
+```{r}
+df %>%
+  filter(!is.na(garage_yr_blt)) %>%
+  mutate(garage_age = 2020 - garage_yr_blt) %>%
+  ggplot(aes(x = garage_area, y = sale_price, color = garage_age)) +
+    geom_point(size = 3)
+```
+
+
+
+```{r}
+df %>%
+  select(starts_with("garage") & is.character)
+```
+
+
+```{r}
+names(df)
+```
+
 
 ```{r}
 df %>%
